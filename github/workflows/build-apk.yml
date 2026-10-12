@@ -1,0 +1,103 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Create Android project
+        run: npx cap add android
+
+      - name: Generate app icons
+        run: npx @capacitor/assets generate --android || echo "icons skipped"
+
+      - name: Allow vibration
+        run: sed -i '0,/<application/s//<uses-permission android:name="android.permission.VIBRATE" \/>\n    <application/' android/app/src/main/AndroidManifest.xml
+
+      - name: Use the fixed signing key
+        run: |
+          mkdir -p ~/.android
+          cat > /tmp/ks.b64 <<'KEYEND'
+          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
+          KEYEND
+          base64 -d /tmp/ks.b64 > ~/.android/debug.keystore
+
+      - name: Bump version number
+        run: sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"3.${{ github.run_number }}\"/" android/app/build.gradle
+
+      - name: Sync web files and plugins
+        run: npx cap sync android
+
+      - name: Build debug APK
+        run: |
+          chmod +x android/gradlew
+          cd android && ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mo2tamarati-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
